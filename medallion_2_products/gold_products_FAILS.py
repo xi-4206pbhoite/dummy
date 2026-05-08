@@ -34,9 +34,9 @@ df_gold = (
         F.col("price_usd"),
         F.col("cogs_usd"),
         (F.col("price_usd") - F.col("cogs_usd")).alias("profit_usd"),
-        # ERROR: This will cause division by zero for products where price_usd = 0
-        # The silver layer coalesced nulls to 0, so some products have price = 0
-        (((F.col("price_usd") - F.col("cogs_usd")) / F.col("price_usd")-F.col("price_usd")) * 100)
+        # FIX: nullif guards against division-by-zero (silver coalesces NULL prices to 0);
+        # zero-priced products return NULL margin instead of crashing.
+        (((F.col("price_usd") - F.col("cogs_usd")) / F.nullif(F.col("price_usd"), F.lit(0))) * 100)
             .cast(DecimalType(5, 2))
             .alias("profit_margin_pct")
     )
