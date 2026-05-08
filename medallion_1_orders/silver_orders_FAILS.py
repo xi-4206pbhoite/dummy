@@ -17,9 +17,6 @@
 # DBTITLE 1,Silver Orders with Type Error
 from pyspark.sql import functions as F
 
-# Intentionally cause a type conversion error by casting a string column with non-numeric values to IntegerType
-from pyspark.sql.types import IntegerType
-
 print("Starting Silver layer transformation...")
 
 # Read from bronze layer
@@ -27,24 +24,19 @@ df_bronze = spark.table("workspace.orders_silver.bronze_orders_m1")
 
 print(f"Bronze records loaded: {df_bronze.count()}")
 
-# Apply transformations with TYPE ERROR
+# Apply transformations
 df_silver = (
     df_bronze
     .withColumn("order_id_clean", F.col("ORDER_ID"))
     .withColumn("user_id_clean", F.col("USER_ID"))
-    # ERROR: Trying to cast CREATED_AT (timestamp string like '2024-01-15 10:30:45') to INTEGER
-    # This will fail because the string contains dashes, colons, and spaces
-    
-    .withColumn("source_system_as_int", F.col("source_system").cast(IntegerType()))
     .withColumn("price_usd_clean", F.col("PRICE_USD"))
     .withColumn("processing_timestamp", F.current_timestamp())
 )
 
 print("Attempting to materialize data...")
-# This will trigger the error when Spark tries to execute the transformation
 # display(df_silver.limit(10))
 
-# Write to silver table (won't reach here due to error)
+# Write to silver table
 df_silver.write.mode("overwrite").saveAsTable("workspace.orders_silver.silver_orders_m1")
 
 print("Silver layer completed")
